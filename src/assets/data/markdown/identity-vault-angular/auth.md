@@ -79,6 +79,8 @@ Once we get the session information from our authentication service, we will nee
 ionic generate service core/vault --skipTests
 ```
 
+Be sure to update the `src/app/core/index.ts` file as well.
+
 For now, we will just store the session information in memory.
 
 ```TypeScript
@@ -93,21 +95,23 @@ export class VaultService {
 
   constructor() {}
 
-  async login(session: Session): Promise<void> {
+  async setSession(session: Session): Promise<void> {
     this.session = session;
   }
 
-  async restoreSession(): Promise<Session> {
+  async getSession(): Promise<Session> {
     return this.session;
   }
 
-  async logout(): Promise<void> {
+  async clearSession(): Promise<void> {
     this.session = null;
   }
 }
 ```
 
-Ignore the the naming of the methods as well as the fact that they are all `async` when they don't need to be. We'll just call that _foreshadowing_ for now... 🤓
+Ignore the fact that these methods are all `async` when they don't need to be. In an actual application you would probably have a service similar to this that is used to store your session information somewhere. In that service, those methods are likely asynchronous, but that depends on the mechanics of the storage mechanism that is being used.
+
+When we switch to Identity Vault, these methods will need to be asynchronous, so we are just starting out coding that way. Your mileage may varry in an actual production application.
 
 ## The Rest of the App
 
@@ -121,7 +125,7 @@ You will need to inject the `VaultService` and then update the `getToken()` meth
 
 ```TypeScript
   private async getToken(): Promise<string | undefined> {
-    const session = await this.vault.restoreSession();
+    const session = await this.vault.getSession();
     return session?.token;
   }
 ```
@@ -146,7 +150,7 @@ export class AuthGuardService implements CanActivate {
   ) {}
 
   async canActivate(): Promise<boolean> {
-    const isLoggedIn = !!(await this.vault.restoreSession());
+    const isLoggedIn = !!(await this.vault.getSession());
     if (!isLoggedIn) {
       this.navController.navigateRoot(['/', 'login']);
     }
@@ -165,7 +169,7 @@ From the login page, we need to perform the login and then store the session in 
   signIn() {
     this.authentication.login(this.email, this.password).subscribe(session => {
       if (session) {
-        this.vault.login(session);
+        this.vault.setSession(session);
         this.navController.navigateRoot('/');
       }
     });
@@ -185,7 +189,7 @@ First, inject the `AuthenticationService` and `VaultService`. With that in place
 
 ```TypeScript
   async ionViewWillEnter() {
-    const session = await this.vault.restoreSession();
+    const session = await this.vault.getSession();
     this.currentUser = session?.user;
   }
 
@@ -194,7 +198,7 @@ First, inject the `AuthenticationService` and `VaultService`. With that in place
       .logout()
       .pipe(
         tap(() => {
-          this.vault.logout();
+          this.vault.clearSession();
           this.navController.navigateRoot(['/', 'login']);
         }),
       )
@@ -204,4 +208,4 @@ First, inject the `AuthenticationService` and `VaultService`. With that in place
 
 ## Conclusion
 
-At this point, the full login and logout cycle works. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.
+At this point, the full login and logout cycle works, and we have an application that implements a typical, albeit extrememly simple, authentication workflow. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.

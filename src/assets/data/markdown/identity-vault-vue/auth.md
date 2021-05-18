@@ -62,15 +62,15 @@ import { Session } from '@/models';
 class VaultService {
   private session: Session | undefined;
 
-  async login(session: Session): Promise<void> {
+  async setSession(session: Session): Promise<void> {
     this.session = session;
   }
 
-  async restoreSession(): Promise<Session | undefined> {
+  async getSession(): Promise<Session | undefined> {
     return this.session;
   }
 
-  async logout(): Promise<void> {
+  async clearSession(): Promise<void> {
     this.session = undefined;
   }
 }
@@ -78,7 +78,9 @@ class VaultService {
 export const vault = new VaultService();
 ```
 
-Ignore the the naming of the methods as well as the fact that they are all `async` when they don't need to be. We'll just call that _foreshadowing_ for now... 🤓
+Ignore the fact that these methods are all `async` when they don't need to be. In an actual application you would probably have a service similar to this that is used to store your session information somewhere. In that service, those methods are likely asynchronous, but that depends on the mechanics of the storage mechanism that is being used.
+
+When we switch to Identity Vault, these methods will need to be asynchronous, so we are just starting out coding that way. Your mileage may varry in an actual production application.
 
 ## The Rest of the App
 
@@ -86,11 +88,23 @@ Now that we have the basics in place, let's modify the rest of the application t
 
 ### Request Interceptor
 
-The purpose of the request interceptor is to modify outgoing requests to include the auth token in the `Authorization` header as a bearer token. Now that we have a token, we can get the token from the vault and add it to the outbound requests. In `src/services/api.ts`, you will need to import the `vault` and then update the interceptor as such:
+The purpose of the request interceptor is to modify outgoing requests to include the auth token in the `Authorization` header as a bearer token. Now that we have a token, we can get the token from the vault and add it to the outbound requests. In `src/services/api.ts`, the request interceptor currently looks like this:
+
+```TypeScript
+client.interceptors.request.use((config: AxiosRequestConfig) => {
+  const token = '';
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+```
+
+As you can see, the token is just being set to an empty string. You will need to import the `vault`. You can then update the interceptor to get the session from the vault and unpack the token from the session. This will also require making the interceptor `async`.
 
 ```TypeScript
 client.interceptors.request.use(async (config: AxiosRequestConfig) => {
-  const session = await vault.restoreSession();
+  const session = await vault.getSession();
   if (session?.token) {
     config.headers.Authorization = `Bearer ${session.token}`;
   }
@@ -103,14 +117,14 @@ client.interceptors.request.use(async (config: AxiosRequestConfig) => {
 The Auth Guard exists to prevent navigation to certain pages unless the user is authenticated. Currently it just always assumes that the user is authenticated (see `src/router/index.ts`):
 
 ```TypeScript
-    // TODO: check that we are authenticated
-    const authenticated = true;
+// TODO: check that we are authenticated
+const authenticated = true;
 ```
 
 Change those lines as such:
 
 ```TypeScript
-const authenticated = !!(await vault.restoreSession());
+const authenticated = !!(await vault.getSession());
 ```
 
 Be sure to import the `vault` like we did with the interceptor.
@@ -128,7 +142,7 @@ From the login page, we need to perform the login and then store the session in 
         password.value,
       );
       if (success && user && token) {
-        vault.login({
+        vault.setSession({
           user,
           token,
         });
@@ -150,7 +164,7 @@ First, import the `AuthenticationService` and `vault`. With those imports in pla
 
 ```TypeScript
     onIonViewWillEnter(async () => {
-      const session = await vault.restoreSession();
+      const session = await vault.getSession();
       currentUser.value = session?.user;
     });
 ```
@@ -160,11 +174,11 @@ We also need to modify the `logout()` method to perform the logout and clear the
 ```TypeScript
     const logout = async () => {
       await AuthenticationService.logout();
-      await vault.logout();
+      await vault.clearSession();
       router.replace('/login');
     };
 ```
 
 ## Conclusion
 
-At this point, the full login and logout cycle works. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.
+At this point, the full login and logout cycle works, and we have an application that implements a typical, albeit extrememly simple, authentication workflow. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.

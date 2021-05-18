@@ -349,12 +349,16 @@
               "file": "install"
             },
             {
-              "title": "Other Auth Modes",
+              "title": "Other Vault Types",
               "file": "vault-types"
             },
             {
               "title": "Customize the PIN Dialog",
               "file": "custom-pin"
+            },
+            {
+              "title": "The Device API",
+              "file": "device"
             },
             {
               "title": "Other Configurations",
@@ -421,7 +425,7 @@
               "file": "install"
             },
             {
-              "title": "Other Auth Modes",
+              "title": "Other Vault Types",
               "file": "vault-types"
             },
             {

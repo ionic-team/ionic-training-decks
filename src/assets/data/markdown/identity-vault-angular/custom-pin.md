@@ -1,48 +1,74 @@
-# Lab: Customize the PIN Dialog
+# Lab: The Custom Passcode Vault
 
-At this point, the application has a well defined workflow for determining how to secure the token. However, the workflow used to gather or enter the PIN is a little clunky. The workflow and UI that it is currently using is intended for development use only, and is not intended to be used in a production quality application. **We highly suggest that application developers create their own PIN dialog and workflow in order to provide a more appropriate experience for their application.**
+Up to now, we have been ignoring the `CustomPasscode` vault. That is because there is a bit of extra code that we need in order to support this. First, we will need to respond to an event from Identity Vault. Second, we will need to create our own custom workflow in order to obtain the passcode from the user.
 
-In this section we will improve the session PIN user experience.
+In this lesson we will first explore responding to events from Identity Vault and then look into adding a workflow in order to support the `CustomPasscode` vault type.
 
-## The `onPasscodeRequest` Callback
+## Identity Vault Events
 
-The `IonicIdentityVaultUser` class contains a method named `onPasscodeRequest` that is called whenever the system needs to obtain a PIN. This method is called with a single parameter that is `true` if the vault is setting the passcode and `false` when the vault is obtaining the passcode in order to unlock the vault.
+The Vault contains several methods that are used to register callbacks that will be triggered via various events within Identity Vault. The triggering event is indicated by the name.
+
+- `onConfigChanged()`
+- `onError()`
+- `onLock()`
+- `onUnlock()`
+- `onPasscodeRequested()`
+
+At this time, we will get a taste for these events by exploring the `onLock()` method.
+
+Add the following code to the `VaultService` class in our application:
 
 ```TypeScript
-  async onPasscodeRequest(isPasscodeSetRequest: boolean): Promise<string> {
-    // Code to obtain PIN goes here...
-    return pin;
+  private initializeEventHandlers() {
+    this.vault.onLock(() => alert('You are now locked out of the vault!!'));
   }
 ```
 
-The `onPasscodeRequest` method should return one of the following values:
-
-- `empty string`: the user cancelled the entry of the PIN
-- `non-empty string`: the PIN entered by the user
-
-If you return `undefined` from this method, Identity Vault will fall back to the default PIN experience, so when the user cancels make sure you are returning an empty string and not `undefined`.
-
-### Obtaining the PIN
-
-The "Code to obtain PIN goes hear..." could literally be anything you want to obtain a PIN. For example, each users in the system could have an "employee number" associated with their user that gets looked up from the API and then gets used as a PIN. In this case, the user would never have to establish a PIN. They would just have to enter their employee ID to unlock the vault.In that case, your logic may look like this:
+Once that is in place, call it in the constructor:
 
 ```TypeScript
-  async onPasscodeRequest(isPasscodeSetRequest: boolean): Promise<string> {
-    if (isPasscodeSetRequest) {
-      return obtainPINFromAPI();
-    } else {
-      return obtainPINFromUser();
-    }
+  constructor(private platform: Platform) {
+    this.vault = this.platform.is('hybrid')
+      ? new Vault({
+          key: 'io.ionic.traininglabng',
+          type: 'SecureStorage',
+          deviceSecurityType: 'Both',
+          lockAfterBackgrounded: 2000,
+          shouldClearVaultAfterTooManyFailedAttempts: true,
+          customPasscodeInvalidUnlockAttempts: 2,
+          unlockVaultOnLoad: false,
+        })
+      : new BrowserVault();
+
+    this.initializeEventHandlers();
   }
 ```
 
-In this scenario, `obtainPINFromAPI()` makes an API call to get the employee ID and returns it. The `obtainPINFromUser()` method then displays some kind of dialog where the user enters their employee ID to unlock the vault.
+Build the appcation and run it on a device. You can now see that an alert is displayed whenever the vault locks.
 
-A more common scenario, however, is to use a custom component within a modal dialog to obtain the PIN for both initially setting the PIN and for unlocking the vault. That is the flow we will implement here.
+**Note:** as of the time of this writing, the `onLock()` and `onUnlock()` are cleared whenever the config changes, so we will have to reset that each time. For now, let's rewrite the `setVaultType()` method to reflect that:
 
-### The `PinDialogComponent`
+```TypeScript
+  async setVaultType(type: VaultType): Promise<void> {
+    await this.vault.updateConfig({
+      ...this.vault.config,
+      type: type.type,
+      deviceSecurityType: type.deviceSecurityType,
+    });
+    this.initializeEventHandlers();
+  }
+```
 
-Rather than write the PIN Dialog component, we are just going to give you the code. <a download href="/assets/packages/ionic-angular/pin-dialog.zip">Download the zip file</a> and unpack it under `src/app` creating a `pin-dialog` folder. Have a look at the component to get an idea of what the code does. The component displays a simple numeric keypad and a prompt area. The following workflows are implemented by the component:
+## The `onPasscodeRequested` Callback
+
+The `onPasscodeRequested()` method registers a function that will be called any time a passcode is required from the user. The function used here should:
+
+1. Obtain the passcode from the user.
+1. Call `setCustomPasscode()` passing the obtained passcode.
+
+### Obtaining the Passcode
+
+The passcode is often obtained via a custom passcode or PIN entry dialog. Rather than write the PIN Dialog component, we are just going to give you the code. <a download href="/assets/packages/ionic-angular/pin-dialog.zip">Download the zip file</a> and unpack it under `src/app` creating a `pin-dialog` folder. Have a look at the component to get an idea of what the code does. The component displays a simple numeric keypad and a prompt area. The following workflows are implemented by the component:
 
 - when `setPasscodeMode` is `true`
   - the user is prompted for a PIN
@@ -65,10 +91,10 @@ First, add the `PinDialogComponentModule` to the `imports` array in `app.module.
 
 Second, in `vault.service.ts`, import the `PinDialogComponent` and inject the `ModalController`.
 
-Once all of that is in place, we can modify `vault.service.ts` to implement the `onPasscodeRequest` event callback:
+Once all of that is in place, we can modify `vault.service.ts` to implement the function to pass to `onPasscodeRequested()` and hook it all up:
 
 ```TypeScript
-  async onPasscodeRequest(isPasscodeSetRequest: boolean): Promise<string> {
+  private async getPasscode(isPasscodeSetRequest: boolean): Promise<string> {
     const dlg = await this.modalController.create({
       backdropDismiss: false,
       component: PinDialogComponent,
@@ -82,7 +108,29 @@ Once all of that is in place, we can modify `vault.service.ts` to implement the 
   }
 ```
 
-Note the return value. If the data passed back from the dialog is "falsey" we want to make sure we are resolving to an empty string to signify the user cancelling the operation.
+With that in place, set up the callback:
+
+```TypeScript
+  private initializeEventHandlers() {
+    this.vault.onPasscodeRequested(async () => {
+      const p = await this.getPasscode(false);
+      return this.vault.setCustomPasscode(p);
+    });
+    this.vault.onLock(() => alert('You are now locked out of the vault!!'));
+  }
+```
+
+**TODO:** at this time, there is no way to determine if this is a "set" request or not, so we are always passing `false`. Once that is worked out, we will need to fix this.
+
+Finally, update the `validMobileVaultTypes()` method to include an entry for the `CustomPasscode` vault type.
+
+```TypeScript
+      {
+        label: 'Custom PIN Unlock',
+        type: 'CustomPasscode',
+        deviceSecurityType: 'Both',
+      },
+```
 
 Build this and give it a try on your device.
 
@@ -94,4 +142,4 @@ In this way, neither the PIN nor the key is ever stored anywhere. This means tha
 
 ## Conclusion
 
-We have now fully integrated Identity Vault into our "proof of concept" application, and have seen some of the configuration options at work. We can now start thinking about how it would be best integrated in our own real-world applications.
+We have defined our workflow, and Identity Vault is working within our application. Next, we will expore Identity Vault's device API which will allow us to fine tune the behavior of our application.
