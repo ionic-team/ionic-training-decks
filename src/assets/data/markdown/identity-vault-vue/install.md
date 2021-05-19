@@ -16,46 +16,58 @@ npx cap update
 
 ## A Simple Vault Service
 
-In order to integrate Identity Vault into our application, we will extend the `IonicIdentityVaultUser` class that is provided by Identity Vault. Using this class, we will configure the vault and interact with it.
+In order to integrate Identity Vault into our application, we will look for the the service within our application where we are storing the session information and swap out the storage mechanism. Luckily for us, we just wrote the authentication workflow, and did so fairly cleanly, so this will be easy. In a production application this may not be quite as straight forward, but there is _usually_ a service that is a natural choice. Look for services with names like `IdentityService`, `SessionService`, or `SessionStorageService`.
 
-When integrating Identity Vault into an existing application, there is quite often a service that is a natural choice to convert. We already have a `VaultService` and we will convert it to use Identity Vault. Most other applications have a service that manages the the current session. Other common names for these services are `IdentityService` or `SessionService`. Whatever this service is in your existing system is a good candidate. In many cases, you can modify this service to extend Identity Vault. This has the advantage of needing to make few changes throughout the rest of the appliction as the workflow for how the current session information is obtained is already defined.
-
-In our tutorial application, we will convert the `VaultService` to extend `IonicIdentityVaultUser`. We had intentionally created this service to match the calling conventions of Identity Vault. In a real world app, you may need to perform a bit more adaptation at this point in order to avoid too much refactoring.
+In our tutorial application, we will convert the `VaultService` to use Identity Vault for the storage mechanism.
 
 ```TypeScript
-import {
-  AuthMode,
-  IonicIdentityVaultUser,
-} from '@ionic-enterprise/identity-vault';
+import { Vault } from '@ionic-enterprise/identity-vault';
 import { Session } from '@/models';
 
-class VaultService extends IonicIdentityVaultUser<Session> {
+class VaultService {
+  private key = 'session';
+  private vault: Vault;
+
   constructor() {
-    super(
-      { ready: () => Promise.resolve() },
-      {
-        unlockOnAccess: true,
-        hideScreenOnBackground: true,
-        lockAfter: 5000,
-        authMode: AuthMode.SecureStorage,
-      }
-    );
+    this.vault = new Vault({
+      key: 'io.ionic.traininglabng',
+      type: 'SecureStorage',
+      deviceSecurityType: 'Both',
+      lockAfterBackgrounded: 2000,
+      shouldClearVaultAfterTooManyFailedAttempts: true,
+      customPasscodeInvalidUnlockAttempts: 2,
+      unlockVaultOnLoad: false,
+    });
+  }
+
+  async setSession(session: Session): Promise<void> {
+    return this.vault.setValue(this.key, session);
+  }
+
+  async getSession(): Promise<Session | null | undefined> {
+    return this.vault.getValue(this.key);
+  }
+
+  async clearSession(): Promise<void> {
+    return this.vault.clear();
   }
 }
 
 export const vault = new VaultService();
 ```
 
-Note the first parameter: `{ ready: () => Promise.resolve() }`. Identity Vault expects an object with a `ready()` method. This is for use with Cordova where we have to await the "device ready" event. With `@ionic/vue` we are using Capacitor for the native layer, so there is no need for this, thus we pass a stub instead.
-
 This is what our configuration means:
 
-- `unlockOnAccess`: if the vault is locked, unlock the vault when the application attempts to access the session. If this value is false, the application will need to call `unlock()` itself. This value is typically `true` unless you want fine-grained control over the unlock workflow.
-- `hideScreenOnBackground`: setting this option `true` results in a privacy screen being displayed rather than a snapshot of the application when it is in the background.
-- `lockAfter`: the number of milliseconds to wait before locking the vault when the application is in the background.
-- `authMode`: the method to use to unlock the vault. In the case of `SecureStorage`, the session will be stored in a secure location, but the vault will never lock.
-
-**Note:** with `authMode: AuthMode.SecureStorage` it does not _really_ matter if we set `unlockOnAccess` to `true` or to `false`, but as we modify this application it will matter, so we are just setting it `true` because we will eventually want that behavior.
+- `key`: this value identifies our vault, allowing us to have multiple vaults in the application is we so choose. The value used needs to be unique within the application.
+- `type`: the type of vault, which also determines the mechanism for unlocking the vault. Types of vaults are:
+  - `SecureStorage`: the data is stored in a secure location but never locked
+  - `DeviceSecurity`: this type of vault is unlocked via a device supplied mechanism such as biometrics or the system passcode
+  - `CustomPasscode`: this type of vault is unlocked via a session passcode. The mechanism for supplying the passcode must be supplied by the application
+- `deviceSecurityType`: the mechanism used to unlock a vault of type `DeviceSecurity`, valid values are: `SystemPasscode`, `Biometrics`, or `Both`
+- `lockAfterBackgrounded`: the number of milliseconds to wait before locking the vault when the application is in the background.
+- `shouldClearVaultAfterTooManyFailedAttempts`: if this flag is `true` the vault will be cleared if there are too many failed attempts to unlock it. If you are using a `DeviceSecurity` vault, the value of "too many" is determined by the OS
+- `customPasscodeInvalidUnlockAttempts`: the number of failed attempts that is considered "too many" for a `CustomPasscode` vault
+- `unlockVaultOnLoad`: if this value is `true` the application will try to unlock the vault on initial load, otherwise it will only attempt to unlock when the vault is locked and access to the vault is required
 
 For a full explanation of all of the configuration options, please see <a href="https://ionic.io/docs/identity-vault/api#vaultoptions" target="_blank">the VaultOptions documentation</a>.
 

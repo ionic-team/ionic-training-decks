@@ -66,7 +66,7 @@ class VaultService {
     this.session = session;
   }
 
-  async getSession(): Promise<Session | undefined> {
+  async getSession(): Promise<Session | null | undefined> {
     return this.session;
   }
 
