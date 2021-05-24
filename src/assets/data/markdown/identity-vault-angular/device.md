@@ -149,10 +149,10 @@ This also results in needing to make a minor change to wherever it is called (ju
 
 Often our applications will show personally identifiable information. The default behavior when an application is put in the background on an iOS or Android device is to just take a screenshot and use that as the user scrolls through the open applications. However, this could be used by a bad actor to gather sensitive data while the app should be locked.
 
-Identlty Vault includes a privacy screen that replaces the screenshot with something else. The native level APIs work a little differently by OS, so the behavior is not consistent. Here is how this works on each OS:
+Identity Vault includes a privacy screen that replaces the screenshot with something else. The native level APIs work a little differently by OS, so the behavior is not consistent. Here is how this works on each OS:
 
 - **Android** has an API for this that simply replaces the screenshot with a plain gray background.
-- **iOS** does not have an API for this at all, so Identlty Vault uses the splash screen to obsucure the screenshot.
+- **iOS** does not have an API for this at all, so Identity Vault uses the splash screen to obscure the screenshot.
 
 For many applications, this is either something we want or we don't want. As a result, the `AppComponent` is a good place to set it if we want it:
 

@@ -44,7 +44,7 @@ Once that is in place, call it in the constructor:
   }
 ```
 
-Build the appcation and run it on a device. You can now see that an alert is displayed whenever the vault locks.
+Build the application and run it on a device. You can now see that an alert is displayed whenever the vault locks.
 
 **Note:** as of the time of this writing, the `onLock()` and `onUnlock()` are cleared whenever the config changes, so we will have to reset that each time. For now, let's rewrite the `setVaultType()` method to reflect that:
 
@@ -142,4 +142,4 @@ In this way, neither the PIN nor the key is ever stored anywhere. This means tha
 
 ## Conclusion
 
-We have defined our workflow, and Identity Vault is working within our application. Next, we will expore Identity Vault's device API which will allow us to fine tune the behavior of our application.
+We have defined our workflow, and Identity Vault is working within our application. Next, we will explore Identity Vault's device API which will allow us to fine tune the behavior of our application.

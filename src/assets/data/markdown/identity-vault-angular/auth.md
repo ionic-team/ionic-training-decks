@@ -111,7 +111,7 @@ export class VaultService {
 
 Ignore the fact that these methods are all `async` when they don't need to be. In an actual application you would probably have a service similar to this that is used to store your session information somewhere. In that service, those methods are likely asynchronous, but that depends on the mechanics of the storage mechanism that is being used.
 
-When we switch to Identity Vault, these methods will need to be asynchronous, so we are just starting out coding that way. Your mileage may varry in an actual production application.
+When we switch to Identity Vault, these methods will need to be asynchronous, so we are just starting out coding that way. Your mileage may vary in an actual production application.
 
 ## The Rest of the App
 
@@ -208,4 +208,4 @@ First, inject the `AuthenticationService` and `VaultService`. With that in place
 
 ## Conclusion
 
-At this point, the full login and logout cycle works, and we have an application that implements a typical, albeit extrememly simple, authentication workflow. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.
+At this point, the full login and logout cycle works, and we have an application that implements a typical, albeit extremely simple, authentication workflow. Of course, as soon as you refresh the browser or restart your application, you lose the session. In the next section, we will begin using Identity Vault in order to persist the session.
