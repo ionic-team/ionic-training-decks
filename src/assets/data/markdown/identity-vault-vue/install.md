@@ -82,47 +82,44 @@ The classes themselves are boiler-plate, so let's just download them rather than
 - `npm i @capacitor/storage`
 - <a download href="/assets/packages/ionic-vue/browser-vault.zip">Download the zip file</a>
 - unzip the file somewhere
-- copy the `BrowserVaultService.ts` and `BrowserVaultPlugin.ts` files from where you unpacked them to `src/services`
+- copy the `BrowserVault.ts` file from where you unpacked the zip file to `src/services`
 
-Finally, in the `VaultService` class, import the `browserVaultPlugin` service and override the `getPlugin()` method to use the real plugin if the application is run in a hybrid mobile context, and the fake "browser vault" otherwise.
+Finally, in the `VaultService` class, import the `BrowserVault` class. The `isPlatform()` function will also have to be imported from `@ionic/vue`. If the application is running in a web-native (also known as "hybrid") context, then it has access to the vault and should use it. Otherwise we will have to use the browser vault.
 
-When completed, the service will look like this:
+When completed, the service will now look like this:
 
 ```TypeScript
-import { Session } from '@/models';
-import {
-  AuthMode,
-  IonicIdentityVaultUser,
-  IonicNativeAuthPlugin,
-} from '@ionic-enterprise/identity-vault';
+import { Vault } from '@ionic-enterprise/identity-vault';
 import { isPlatform } from '@ionic/vue';
-import { browserVaultPlugin } from './BrowserVaultPlugin';
+import { Session } from '@/models';
+import { BrowserVault } from './BrowserVault';
 
 class VaultService extends IonicIdentityVaultUser<Session> {
+  private key = 'session';
+  private vault: Vault | BrowserVault;
+
   constructor() {
-    super(
-      { ready: () => Promise.resolve() },
-      {
-        unlockOnAccess: true,
-        hideScreenOnBackground: true,
-        lockAfter: 5000,
-        authMode: AuthMode.SecureStorage,
-      },
-    );
+    this.vault = isPlatform('hybrid')
+      ? new Vault({
+          key: 'io.ionic.traininglabng',
+          type: 'SecureStorage',
+          deviceSecurityType: 'Both',
+          lockAfterBackgrounded: 2000,
+          shouldClearVaultAfterTooManyFailedAttempts: true,
+          customPasscodeInvalidUnlockAttempts: 2,
+          unlockVaultOnLoad: false,
+        })
+      : new BrowserVault();
   }
 
-  getPlugin(): IonicNativeAuthPlugin {
-    if (isPlatform('hybrid')) {
-      return super.getPlugin();
-    }
-    return browserVaultPlugin;
-  }
+  ... // session methods here
+
 }
 
 export const vault = new VaultService();
 ```
 
-Now when you run in the browser, the application will use the `BrowserVaultPlugin` and `BrowserVaultService` classes to store the keys in a way that the browser can consume them.
+Now when you run in the browser, the application will use the `BrowserVault` to store the keys in a way that the browser can consume them.
 
 ## Conclusion
 
