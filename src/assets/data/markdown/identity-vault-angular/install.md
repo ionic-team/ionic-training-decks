@@ -80,10 +80,16 @@ Since Identity Vault is used to store the authentication tokens in a secure loca
 
 The classes themselves are boiler-plate, so let's just download them rather than going through writing it:
 
-- `npm i @capacitor/storage`
 - <a download href="/assets/packages/ionic-angular/browser-vault.zip">Download the zip file</a>
 - unzip the file somewhere
 - copy the `browser-vault.ts` file from where you unpacked it to `src/app/core`
+
+The `BrowserVault` class uses the `@capacitor/storage` to store the data, so we will need to install that at this time:
+
+```bash
+npm i @capacitor/storage
+npx cap update
+```
 
 Finally, in the `VaultService` class, inject the `Platform` service so we can detect the platform the application is currently running on. If the application is running in a web-native (also known as "hybrid") context, then it has access to the vault and should use it. Otherwise we will have to use the browser vault.
 

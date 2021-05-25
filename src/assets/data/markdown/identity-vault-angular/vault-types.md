@@ -129,9 +129,6 @@ Next add the following code:
 
   ngOnInit() {
     this.vaultTypes = this.vault.validVaultTypes();
-    if (this.vaultTypes.length) {
-      this.vaultTypeChanged({ detail: { value: 0 } });
-    }
   }
 
   vaultTypeChanged(evt: { detail: { value: number } }) {
@@ -145,7 +142,6 @@ In the HTML, replace the `app-explore-container` with the following markup:
 ```html
 <ion-radio-group
   *ngIf="vaultTypes.length"
-  [value]="0"
   (ionChange)="vaultTypeChanged($event)"
 >
   <ion-list-header>
@@ -158,6 +154,16 @@ In the HTML, replace the `app-explore-container` with the following markup:
   </ion-item>
 </ion-radio-group>
 ```
+
+### Native Configuration (iOS Only)
+
+In order to build this for an iOS device, you will need to supply a value for `NSFaceIDUsageDescription` with a message explaining why you want to use Face ID when getting the user's permissions. The easiest way to do this is:
+
+- npx cap open ios
+- open the `Info.plist` file in `Xcode`
+- add and entry for `NSFaceIDUsageDescription` with a value like "Use Face ID to unlock the application"
+
+### Test It
 
 Build and deploy on a device where you have biometrics configured. At this point, run the following test a few times:
 
