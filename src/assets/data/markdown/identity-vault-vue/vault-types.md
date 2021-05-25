@@ -161,7 +161,7 @@ Finally, add the following `setup()` function to the Vue object:
 
 In order to build this for an iOS device, you will need to supply a value for `NSFaceIDUsageDescription` with a message explaining why you want to use Face ID when getting the user's permissions. The easiest way to do this is:
 
-- npx cap open ios
+- `npx cap open ios`
 - open the `Info.plist` file in `Xcode`
 - add and entry for `NSFaceIDUsageDescription` with a value like "Use Face ID to unlock the application"
 
