@@ -2,7 +2,7 @@
 
 Up to now, we have been ignoring the `CustomPasscode` vault. That is because there is a bit of extra code that we need in order to support this. First, we will need to respond to an event from Identity Vault. Second, we will need to create our own custom workflow in order to obtain the passcode from the user.
 
-In this lesson we will first explore responding to events from Identity Vault and then look into adding a workflow in order to support the `CustomPasscode` vault type.
+In this lab we will first explore responding to events from Identity Vault and then look into adding a workflow in order to support the `CustomPasscode` vault type.
 
 ## Identity Vault Events
 
