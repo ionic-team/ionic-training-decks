@@ -46,19 +46,6 @@ Once that is in place, call it in the constructor:
 
 Build the application and run it on a device. You can now see that an alert is displayed whenever the vault locks.
 
-**Note:** as of the time of this writing, the `onLock()` and `onUnlock()` are cleared whenever the config changes, so we will have to reset that each time. For now, let's rewrite the `setVaultType()` method to reflect that:
-
-```TypeScript
-  async setVaultType(type: VaultType): Promise<void> {
-    await this.vault.updateConfig({
-      ...this.vault.config,
-      type: type.type,
-      deviceSecurityType: type.deviceSecurityType,
-    });
-    this.initializeEventHandlers();
-  }
-```
-
 ## The `onPasscodeRequested` Callback
 
 The `onPasscodeRequested()` method registers a function that will be called any time a passcode is required from the user. The function used here should:
@@ -75,7 +62,6 @@ The passcode is often obtained via a custom passcode or PIN entry dialog. Rather
   - the user is prompted for a verification PIN that must match the first PIN
   - if the PINs match, the modal is closed returning that PIN
   - if the PINs do not match, the user has to start over
-  - the user _cannot_ cancel, they _must_ enter a PIN
 - when `setPasscodeMode` is `false`
   - the user is prompted for a PIN
   - the modal will close with the entered PIN
@@ -114,15 +100,13 @@ Finally, register the callback for `onPasscodeRequested()`:
 
 ```TypeScript
   private initializeEventHandlers() {
-    this.vault.onPasscodeRequested(async () => {
-      const p = await this.getPasscode(false);
+    this.vault.onPasscodeRequested(async (isPasscodeSetRequest: boolean) => {
+      const p = await this.getPasscode(isPasscodeSetRequest);
       return this.vault.setCustomPasscode(p);
     });
     this.vault.onLock(() => alert('You are now locked out of the vault!!'));
   }
 ```
-
-**TODO:** at this time, there is no way to determine if this is a "set" request or not, so we are always passing `false`. Once that is worked out, we will need to fix this.
 
 Finally, update the `validMobileVaultTypes()` method to include an entry for the `CustomPasscode` vault type.
 
