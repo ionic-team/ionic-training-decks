@@ -6,37 +6,11 @@ Identity Vault's Device API consists of a set of functions that query device cap
 
 Most of the functions that are part of the Device API have to do with querying the capabilities of the device. First, we will experiment with a few of these on the `Tab1Page`. Next, we will put one of them to practical use in order to refine the list of vault types returned by `validMobileVaultTypes()` in our `VaultService`.
 
-### Show the Statuses in `Tab1Page`
+### Show the Statuses in `Tab1` Page
 
-In the `Tab1Page` we will use the Device API to check some of the capabilities of the device just so we can see how these items behave.
+In `Tab1` page we will use the Device API to check some of the capabilities of the device just so we can see how these items behave.
 
-First, import the device API:
-
-```TypeScript
-import { Device } from '@ionic-enterprise/identity-vault';
-```
-
-Next, add the following public properties to the class:
-
-```Typescript
-  biometricsEnabled: boolean;
-  biometricsSupported: boolean;
-  lockedOut: boolean;
-  privacyScreenEnabled: boolean;
-  systemPasscodeSet: boolean;
-```
-
-Then add the following code to the `ionViewWillEnter()` method:
-
-```TypeScript
-    this.biometricsEnabled = await Device.isBiometricsEnabled();
-    this.biometricsSupported = await Device.isBiometricsSupported();
-    this.lockedOut = await Device.isLockedOutOfBiometrics();
-    this.privacyScreenEnabled = await Device.isHideScreenOnBackgroundEnabled();
-    this.systemPasscodeSet = await Device.isSystemPasscodeSet();
-```
-
-Finally, update the `Tab1Page` HTML template to display these values:
+First, update the `Tab1Page` HTML template to display the values we are interested in. This can go right after the `div` that displays the `currentUser`:
 
 ```HTML
   <div>Biometrics is Enabled: {{biometricsEnabled}}</div>
@@ -46,11 +20,37 @@ Finally, update the `Tab1Page` HTML template to display these values:
   <div>Privacy Screen Enabled: {{privacyScreenEnabled}}</div>
 ```
 
+Next, import the device API:
+
+```TypeScript
+import { Device } from '@ionic-enterprise/identity-vault';
+```
+
+Add the following refs in the `setup()` function. Be sure to also include them in the object returned from the `setup()`:
+
+```Typescript
+const biometricsEnabled = ref(false);
+const biometricsSupported = ref(false);
+const lockedOut = ref(false);
+const privacyScreenEnabled = ref(false);
+const systemPasscodeSet = ref(false);
+```
+
+Finally, add the following code to the `onIonViewWillEnter()` method:
+
+```TypeScript
+    biometricsEnabled.value = await Device.isBiometricsEnabled();
+    biometricsSupported.value = await Device.isBiometricsSupported();
+    lockedOut.value = await Device.isLockedOutOfBiometrics();
+    privacyScreenEnabled.value = await Device.isHideScreenOnBackgroundEnabled();
+    systemPasscodeSet.value = await Device.isSystemPasscodeSet();
+```
+
 Obviously this is not very fancy or pretty, but we are just trying to get an idea of how this API works.
 
 ### Control the Mobile Vault Types List
 
-Switching our attention back to the `vault.service.ts` file, our `validMobileVaultTypes()` method is currently just returning a status list of types:
+Switching our attention back to the `VaultService.ts` file, our `validMobileVaultTypes()` method is currently just returning a status list of types:
 
 ```TypeScript
   private validMobileVaultTypes(): Array<VaultType> {
@@ -84,7 +84,7 @@ Switching our attention back to the `vault.service.ts` file, our `validMobileVau
   }
 ```
 
-However, the biometric options should only be displayed if the user has enabled biometrics on their device. Change the building of this list as such:
+The biometric options should only be displayed if the user has enabled biometrics on their device. Change the building of this list as such:
 
 ```TypeScript
   private async validMobileVaultTypes(): Promise<Array<VaultType>> {
@@ -125,7 +125,7 @@ Notice that this results in needing to make the function `async`. Thus it now re
 
 ```TypeScript
   validVaultTypes(): Promise<Array<VaultType>> {
-    return this.platform.is('hybrid')
+    return isPlatform('hybrid')
       ? this.validMobileVaultTypes()
       : this.validWebVaultTypes();
   }
@@ -137,12 +137,11 @@ Notice that this results in needing to make the function `async`. Thus it now re
   }
 ```
 
-This also results in needing to make a minor change to wherever it is called (just the `Tab3Page` in our application):
+This also results in needing to make a minor change to wherever it is called (just the `Tab3` page in our application). Make the following change in the `Tab3` page's `setup()` function:
 
-```TypeScript
-  async ngOnInit() {
-    this.vaultTypes = await this.vault.validVaultTypes();
-  }
+```diff
+-    vaultTypes.value = vault.validVaultTypes();
++    vault.validVaultTypes().then(t => (vaultTypes.value = t));
 ```
 
 ## Setting the Privacy Screen
@@ -154,24 +153,31 @@ Identity Vault includes a privacy screen that replaces the screenshot with somet
 - **Android** has an API for this that simply replaces the screenshot with a plain gray background.
 - **iOS** does not have an API for this at all, so Identity Vault uses the splash screen to obscure the screenshot.
 
-For many applications, this is either something we want or we don't want. As a result, the `AppComponent` is often a good place to set this:
+For many applications, this is either something we want or we don't want. As a result, the `App` component is often a good place to set this:
 
-```TypeScript
-import { Component, OnInit } from '@angular/core';
+```HTML
+<template>
+  <ion-app>
+    <ion-router-outlet />
+  </ion-app>
+</template>
+
+<script lang="ts">
+import { IonApp, IonRouterOutlet } from '@ionic/vue';
+import { defineComponent } from 'vue';
 import { Device } from '@ionic-enterprise/identity-vault';
 
-@Component({
-  selector: 'app-root',
-  templateUrl: 'app.component.html',
-  styleUrls: ['app.component.scss'],
-})
-export class AppComponent implements OnInit {
-  constructor() {}
-
-  ngOnInit() {
+export default defineComponent({
+  name: 'App',
+  components: {
+    IonApp,
+    IonRouterOutlet,
+  },
+  setup() {
     Device.setHideScreenOnBackground(true);
-  }
-}
+  },
+});
+</script>
 ```
 
 You could also make this something that is set optionally via user settings if you so desire.

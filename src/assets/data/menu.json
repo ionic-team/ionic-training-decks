@@ -433,6 +433,10 @@
               "file": "custom-pin"
             },
             {
+              "title": "The Device API",
+              "file": "device"
+            },
+            {
               "title": "Other Configurations",
               "file": "other-options"
             }
