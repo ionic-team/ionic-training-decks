@@ -6,7 +6,7 @@ In this lab we will first explore responding to events from Identity Vault and t
 
 ## Identity Vault Events
 
-The Vault contains several methods that are used to register callbacks that will be triggered via various events within Identity Vault. The triggering event is indicated by the name.
+The Vault contains several methods that are used to register callbacks that will be triggered via events within Identity Vault. The triggering event is indicated by the name.
 
 - `onConfigChanged()`
 - `onError()`
@@ -68,7 +68,7 @@ The `onPasscodeRequested()` method registers a function that will be called any 
 
 ### Obtaining the Passcode
 
-The passcode is often obtained via a custom passcode or PIN entry dialog. Rather than write the PIN Dialog component, we are just going to give you the code. <a download href="/assets/packages/ionic-vue/pin-dialog.zip">Download the zip file</a> and unpack it. Copy the `AppPinDialog.vue` file to `src/components`. Have a look at the component to get an idea of what the code does. The component displays a simple numeric keypad and a prompt area. The following workflows are implemented by the component:
+The passcode is often obtained via a custom passcode or PIN entry dialog. Rather than write the PIN Dialog component, we are just going to give you the code. <a download href="/assets/packages/ionic-vue/AppPinDialog.vue.zip">Download the zip file</a> and unpack it. Copy the `AppPinDialog.vue` file to `src/components`. Have a look at the component to get an idea of what the code does. The component displays a simple numeric keypad and a prompt area. The following workflows are implemented by the component:
 
 - when `setPasscodeMode` is `true`
   - the user is prompted for a PIN
@@ -85,15 +85,20 @@ In our case, the `PinDialogComponent` encapsulates our whole workflow giving the
 
 ### Hooking it Up
 
-Now that we have the component in place, it is time to hook it up.
+Now that we have the component in place, it is time to hook it up by implementing the `onPasscodeRequested()` callback within our `VaultService.ts` file.
 
-First, import the component as such: `import AppPinDialog from '@/components/AppPinDialog.vue';` and add `modelController` to the import from `@ionic/vue`. Once that is in place, we can modify `VaultService.ts` to implement the function to pass to `onPasscodeRequested()` and hook it all up:
+First we need to perform a couple of preliminary tasks:
+
+- Import the component as such: `import AppPinDialog from '@/components/AppPinDialog.vue';`
+- Add `modelController` to the import from `@ionic/vue`.
+
+With that is in place, we can modify `VaultService.ts` to implement a function to handle the display of our custom PIN dialog:
 
 ```TypeScript
   private async getPasscode(isPasscodeSetRequest: boolean): Promise<string> {
-    const dlg = await this.modalController.create({
+    const dlg = await modalController.create({
       backdropDismiss: false,
-      component: PinDialogComponent,
+      component: AppPinDialog,
       componentProps: {
         setPasscodeMode: isPasscodeSetRequest,
       },
@@ -104,7 +109,7 @@ First, import the component as such: `import AppPinDialog from '@/components/App
   }
 ```
 
-With that in place, set up the callback:
+Finally, register the callback for `onPasscodeRequested()`:
 
 ```TypeScript
   private initializeEventHandlers() {

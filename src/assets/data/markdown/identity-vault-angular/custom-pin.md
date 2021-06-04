@@ -6,7 +6,7 @@ In this lab we will first explore responding to events from Identity Vault and t
 
 ## Identity Vault Events
 
-The Vault contains several methods that are used to register callbacks that will be triggered via various events within Identity Vault. The triggering event is indicated by the name.
+The Vault contains several methods that are used to register callbacks that will be triggered via events within Identity Vault. The triggering event is indicated by the name.
 
 - `onConfigChanged()`
 - `onError()`
@@ -85,13 +85,15 @@ In our case, the `PinDialogComponent` encapsulates our whole workflow giving the
 
 ### Hooking it Up
 
-Now that we have the component in place, it is time to hook it up.
+Now that we have the component in place, it is time to hook it up by implementing the `onPasscodeRequested()` callback within our `vault.service.ts` file.
 
-First, add the `PinDialogComponentModule` to the `imports` array in `app.module.ts`.
+First we need to perform a couple of preliminary tasks:
 
-Second, in `vault.service.ts`, import the `PinDialogComponent` and inject the `ModalController`.
+- Add the `PinDialogComponentModule` to the `imports` array in `app.module.ts`.
+- In the `vault.service.ts` file, import the `PinDialogComponent` and the `ModalController`.
+- Inject the `ModalController` into the service via the constructor.
 
-Once all of that is in place, we can modify `vault.service.ts` to implement the function to pass to `onPasscodeRequested()` and hook it all up:
+With that is in place, we can modify `vault.service.ts` to implement a function to handle the display of our custom PIN dialog:
 
 ```TypeScript
   private async getPasscode(isPasscodeSetRequest: boolean): Promise<string> {
@@ -108,7 +110,7 @@ Once all of that is in place, we can modify `vault.service.ts` to implement the 
   }
 ```
 
-With that in place, set up the callback:
+Finally, register the callback for `onPasscodeRequested()`:
 
 ```TypeScript
   private initializeEventHandlers() {
