@@ -32,10 +32,9 @@ At this point, you can view the application <a href="http://localhost:8100" targ
 If you would like to try running the application on a device, follow these steps:
 
 ```bash
-npm run build
-npx cap sync
-npx cap open android
-npx cap open ios
+ionic cap sync
+ionic cap open android
+ionic cap open ios
 ```
 
 **Note:** for iOS, you will need to have an Apple developer account in order to run on a device.
