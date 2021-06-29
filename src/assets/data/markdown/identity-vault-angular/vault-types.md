@@ -161,7 +161,7 @@ export class LoginPage implements OnInit {
 
 In order to build this for an iOS device, you will need to supply a value for `NSFaceIDUsageDescription` with a message explaining why you want to use Face ID when getting the user's permissions. The easiest way to do this is:
 
-- `npx cap open ios`
+- `ionic cap open ios`
 - open the `Info.plist` file in `Xcode`
 - add and entry for `NSFaceIDUsageDescription` with a value like "Use Face ID to unlock the application"
 
@@ -174,17 +174,17 @@ The user can now choose which authentication mode to use. Play around with some 
 Try the following test:
 
 1. log in using any mode other than "Never Lock Session" (SecureStorage)
-1. navigate to tab two
+1. navigate to the Teas page
 1. put the app in the background for 5 or more seconds
 1. come back to the app
 
-Notice at this point that we can still see the data on page 2 even though the app is locked. This page requires us to be logged in with an unlocked session in order to navigate to it, but since we are already there we aren't blocked. However, if you then navigate to tab 3 and back to tab 2 you _will_ need to unlock the vault.
+Notice at this point that we can still see the data on the Teas page even though the app is locked. This page requires us to be logged in with an unlocked session in order to navigate to it, but since we are already there we aren't blocked. However, if you then navigate to the Settings page and back to the Teas page, you _will_ need to unlock the vault.
 
 Let's fix this by navigating to tab number three (which does not require authentication) when the session locks. Then we will have to unlock the session in order to go back to page two. Add the following code to `vault.service.ts`:
 
 ```TypeScript
   onVaultLocked() {
-    this.navController.navigateRoot(['/', 'tabs', 'tab3']);
+    this.navController.navigateRoot(['/', 'tabs', 'settings']);
   }
 ```
 
@@ -212,7 +212,7 @@ The code for that in `vault.service.ts` looks like this:
 
   onVaultLocked() {
     this.currentSession = undefined;
-    this.navController.navigateRoot(['/', 'tabs', 'tab3']);
+    this.navController.navigateRoot(['/', 'tabs', 'settings']);
   }
 
   onSessionRestored(session: Session) {

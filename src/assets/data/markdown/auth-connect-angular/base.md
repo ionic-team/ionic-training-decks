@@ -32,10 +32,9 @@ At this point, you can view the application <a href="http://localhost:8100" targ
 If you would like to try running the application on a device, follow these steps:
 
 ```bash
-npm run build
-npx cap sync
-npx cap open android
-npx cap open ios
+ionic cap sync
+ionic cap open android
+ionic cap open ios
 ```
 
 **Note:** for iOS, you will need to have an Apple developer account in order to run on a device.
@@ -52,7 +51,15 @@ The tea service is a basic HTTP service that fetches tea related data from a RES
 
 ### Auth Guard
 
-The auth guard is intended to guard our route by disallowing navigation if we are not currently authenticated. Currently, it does nothing and just returns `true`, allowing us through.
+The auth guard is intended to guard our route by disallowing navigation if we are not currently authenticated. Currently, it does this by asking the vault service if a session is currently defined. Once we integrate Auth Connect, however, Auth Connect will become the source of truth as to whether or not a user currently has access.
+
+### Authentication Service
+
+This service provides us with basic HTTP login and logout functionality. In this tutorial, we will be changing this to use Auth Connect in order to implement an OIDC connection instead.
+
+### Vault Service
+
+This service stores information about the current session. This is the vault where our authentication token will be stored. Currently, however, it is just storing the data in memory. This service will come into play when we integrate Auth Connect with another product known as Identity Vault in order to facilitate securely storing our authentication tokens.
 
 ### HTTP Interceptors
 
@@ -60,19 +67,11 @@ Our application contains two HTTP interceptors: an auth interceptor and an unaut
 
 The auth interceptor modifies outbound requests. It adds a bearer token to the `Authorization` header of any request that requires a token. For our application, this is any request other than a `login` request (which we will not be using in this application anyhow, since we will be using Auth Connect to obtain the authorization from an OIDC provider rather than from our own API).
 
-The unauth interceptor examines inbound responses looking for 401 (unauthorized) errors. If it finds one, it redirects the user to the login page. **Note:** this is what is currently causing us to redirect to the login page when we try to access the tab 2 page. The flow looks something like this:
+The unauth interceptor examines inbound responses looking for 401 (unauthorized) errors. If it finds one, it redirects the user to the login page. **Note:** in our architecture, this is a fail-safe interceptor for cases where we have an active session, but the token for that session has either expired or has otherwise been invalidated.
 
-1. the auth guard is a do nothing guard at this point and lets us in
-1. the page uses the tea service to try to get some tea info
-1. the tea service makes the request
-1. the auth interceptor cannot find a token, so it does not append a bearer token
-1. the request is sent to the REST API
-1. the REST API rejects to unauthorized request with a 401 error code
-1. the unauth interceptor examines the response, sees the 401 error code, and redirects the user to the login page
+### Teas Page
 
-### Tab2 Page
-
-The tab 2 page uses the tea service to obtain tea related data from our REST API. It then displays that information in a list.
+The teas page uses the tea service to obtain tea related data from our REST API. It then displays that information in a list.
 
 ## Conclusion
 

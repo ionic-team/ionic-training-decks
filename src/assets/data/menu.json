@@ -341,10 +341,6 @@
               "file": "base"
             },
             {
-              "title": "Add Authentication",
-              "file": "auth"
-            },
-            {
               "title": "Install Identity Vault",
               "file": "install"
             },

@@ -32,17 +32,16 @@ At this point, you can view the application <a href="http://localhost:8100" targ
 If you would like to try running the application on a device, follow these steps:
 
 ```bash
-npm run build
-npx cap sync
-npx cap open android
-npx cap open ios
+ionic cap sync
+ionic cap open android
+ionic cap open ios
 ```
 
 **Note:** for iOS, you will need to have an Apple developer account in order to run on a device.
 
 ## Tour
 
-Open the application in the browser. You should be on the first tab and you are not logged in. Go to the third tab. That should be accessible as well. Now try the second tab. When clicking on this tab you will be redirected to the login page. Let's have a look at what is going on within the application.
+Open the application in the browser. You should be on the Information tab and you are not logged in. Go to the Settings tab. That should be accessible as well. Now try the Teas tab. When clicking on this tab you will be redirected to the login page. Let's have a look at what is going on within the application.
 
 Have a look at the following various parts of the application. With the exception of the page, which is in its own folder, all of these items can be found under `src/app/core`.
 
@@ -50,13 +49,21 @@ Have a look at the following various parts of the application. With the exceptio
 
 The tea service is a basic HTTP service that fetches tea related data from a REST API using Angular's HttpClient service. Our REST API requires authentication in order to provide data. We currently lack a means to provide that authentication.
 
-### Tab2 Page
+### Teas Page
 
-The tab 2 page uses the tea service to obtain tea related data from our REST API. It then displays that information in a list.
+The teas page uses the tea service to obtain tea related data from our REST API. It then displays that information in a list.
 
 ### Auth Guard
 
-The auth guard is intended to guard our route by disallowing navigation if we are not currently authenticated. Currently, it does nothing and just returns `true`, allowing us through.
+The auth guard is intended to guard our route by disallowing navigation if we are not currently authenticated. It does this by asking the vault service if a session is currently defined.
+
+### Authentication Service
+
+This service provides us with basic HTTP login and logout functionality.
+
+### Vault Service
+
+This service stores information about the current session. This is the vault where our authentication token will be stored. Currently, however, it is just storing the data in memory.
 
 ### HTTP Interceptors
 
@@ -64,28 +71,26 @@ Our application contains two HTTP interceptors: an auth interceptor and an unaut
 
 The auth interceptor modifies outbound requests. It adds a bearer token to the `Authorization` header of any request that requires a token. For our application, this is any request other than a `login` request.
 
-The unauth interceptor examines inbound responses looking for 401 (unauthorized) errors. If it finds one, it redirects the user to the login page. **Note:** this is what is currently causing us to redirect to the login page when we try to access the tab 2 page. The flow looks something like this:
-
-1. the auth guard is a do nothing guard at this point and lets us in
-1. the page uses the tea service to try to get some tea info
-1. the tea service makes the request
-1. the auth interceptor cannot find a token, so it does not append a bearer token
-1. the request is sent to the REST API
-1. the REST API rejects to unauthorized request with a 401 error code
-1. the unauth interceptor examines the response, sees the 401 error code, and redirects the user to the login page
+The unauth interceptor examines inbound responses looking for 401 (unauthorized) errors. If it finds one, it redirects the user to the login page. **Note:** in our architecture, this is a fail-safe interceptor for cases where we have an active session, but the token for that session has either expired or has otherwise been invalidated.
 
 ## Conclusion
 
-This is our starting point. Our goal will be to create an authentication service that will establish our session and then integrate Identity Vault with our application to securely store the session information. When we are done, the flow will look like this:
+This is our starting point. Our goal is to integrate Identity Vault with our application to securely store the session information. When we are done, the flow will look like this:
 
 When not logged in:
 
-1. The user starts on the tab one page, which tells them they are not logged in.
-1. The tab 2 page's route is guarded. The guard will redirect the user to the login page, at which point they will need to login in to continue.
+1. The user starts on the Information page, which tells them they are not logged in.
+1. When the user goes to the Teas page, the page's guard will redirect the user to the login page. At which point they will need to login in to continue.
 
 When logged in:
 
-1. The user starts on the tab one page. If the vault is locked, the user will be asked to unlock it. The page tells them they are logged in.
-1. When the user goes to page 2, the session data is obtained from the vault by the HTTP interceptor, unlocking the vault if it is locked.
+1. The user starts on the Information page. If the vault is locked, the user will be asked to unlock it. The page tells them they are logged in.
+1. When the user goes to the Teas page, the session data is obtained from the vault by the HTTP interceptor.
+1. The user will be prompted to provide biometric or passcode information to unlock the vault as needed.
 
-In the next section we will get started by implementing a simple authentication workflow without identity vault
+If you would like to try this now, you can do so with the following credentials:
+
+- **email:** `test@ionic.io`
+- **password:** `Ion54321`
+
+As you can see, we are almost there in that we can log in and navigate around. However, as soon as we restart the application we need to log in again. The session data is not persisted. In the next section we will get started by installing Identity Vault.

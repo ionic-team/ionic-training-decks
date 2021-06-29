@@ -11,7 +11,7 @@ Once the app is properly registered (or the `.npmrc` file is properly copied ove
 
 ```bash
 npm i @ionic-enterprise/auth
-npx cap update
+ionic cap update
 ```
 
 ## Environment
@@ -20,7 +20,7 @@ Often, the most difficult part of setting up Auth Connect is simply making sure 
 
 Once we have the OIDC provider configured properly, we need to configure Auth Connect such that it knows about the OIDC provider. We have a <a href="https://github.com/ionic-team/cs-demo-ac-providers" target="_blank">sample application</a> that will help in this regard. This application is focused solely on the login and logout flows and making sure that the configuration is correct. For this reason we suggest modifying this application for your OIDC provider and working with the configuration within the application. This will then make it easier to integrate the proper configuration into your own application.
 
-Here is the configuration that is required to connect to the provider that we have for this application. This will need to be added to our `src/ environments/environment.ts` and `src/environments/environment.prod.ts` files. In a real-world application it is very likely that this information would be different between development and production, but that is not the case here.
+Here is the configuration that is required to connect to the provider that we have for this application. This will need to be added to our `src/environments/environment.ts` and `src/environments/environment.prod.ts` files. In a real-world application it is very likely that this information would be different between development and production, but that is not the case here.
 
 ```TypeScript
 import { IonicAuthOptions } from '@ionic-enterprise/auth';
@@ -52,11 +52,13 @@ export const webAuthConfig: IonicAuthOptions = {
 };
 ```
 
+**Note:** When updating the `src/environments/*` files, be sure to add the above code but do not replace the `environment` object.
+
 ## Native Project Configuration
 
 ### Android
 
-Open the Android project in Android Studio via `npx cap open android` and find the `AndroidManifest.xml` file. Add the following intent within the `activity` node.
+Open the Android project in Android Studio via `ionic cap open android` and find the `AndroidManifest.xml` file. Add the following intent within the `activity` node.
 
 ```xml
 <intent-filter>
@@ -160,4 +162,4 @@ In general, a schema like `msauth` like we are using for the training is not ver
 
 ## Conclusion
 
-At this point, we have our OIDC provider configured. We also have Auth Connect is installed and configured within our application. In the next section we will implement the authentication workflow.
+At this point, we have our OIDC provider configured. We also have Auth Connect installed and configured within our application. In the next section we will implement the authentication workflow.

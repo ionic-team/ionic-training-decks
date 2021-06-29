@@ -4,7 +4,7 @@ We have implemented Identity Vault in a very specific manner, but it is by no me
 
 ## Different Workflows
 
-With the workflow we are using, if the vault is locked and you try to do something that requires an unlocked application, you unlock the vault at that time. However, if we were to add other pages such as the tab three page that do not require unlocking, then you _could_ go there without unlocking the vault. This flow makes sense if you have an application where you want the user to be able to use most of it regardless of authentication status, but then have specific operations that require valid authentication.
+With the workflow we are using, if the vault is locked and you try to do something that requires an unlocked application, you unlock the vault at that time. However, if we were to add other pages such as the Settings page that do not require unlocking, then you _could_ go there without unlocking the vault. This flow makes sense if you have an application where you want the user to be able to use most of it regardless of authentication status, but then have specific operations that require valid authentication.
 
 This is just one workflow, however. It is also completely valid to implement a "locked" page that you navigate to when the application is locked, and the user is forced to unlock in order to navigate away from that page. Many of our other demo applications, for example, redirect to the Login page, which displays modified prompts when the vault is locked vs. when no one is logged in.
 

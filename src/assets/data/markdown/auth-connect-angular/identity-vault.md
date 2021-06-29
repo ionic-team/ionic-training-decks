@@ -28,18 +28,14 @@ The first thing we need to do in order to use Ionic's Identity Vault is install 
 
 ```bash
 npm i @ionic-enterprise/identity-vault
-npx cap update
+ionic cap update
 ```
 
 ## The Vault Service
 
-Similar to how we implemented Auth Connect, we will implement Identity Vault by creating a service within our application that extends a base Identity Vault class.
+Our application already contains a `VaultService`, but it was written to be the primary source of truth for the session information. What we need is for our vault to be a secure storage provider that Auth Connect can use to store the authentication tokens.
 
-```bash
-ionic g s core/vault --skipTests
-```
-
-We will start with very basic Identity Vault configuration in `src/app/core/vault.service.ts`:
+Let's start by gutting the current `VaultService` and replacing it with a very basic Identity Vault configuration. Here is the new contents of `src/app/core/vault.service.ts`:
 
 ```TypeScript
 import { Injectable } from '@angular/core';

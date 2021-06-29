@@ -11,7 +11,7 @@ Once the app is properly registered (or the `.npmrc` file is properly copied ove
 
 ```bash
 npm i @ionic-enterprise/identity-vault
-npx cap update
+ionic cap update
 ```
 
 ## A Simple Vault Service

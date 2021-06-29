@@ -63,7 +63,19 @@ Now that we have the component in place, it is time to hook it up.
 
 First, add the `PinDialogComponentModule` to the `imports` array in `app.module.ts`.
 
-Second, in `vault.service.ts`, import the `PinDialogComponent` and inject the `ModalController`.
+```TypeScript
+import { PinDialogComponentModule } from './pin-dialog/pin-dialog.module';
+...
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    IonicModule.forRoot(),
+    AppRoutingModule,
+    PinDialogComponentModule,
+  ],
+```
+
+Second, in `vault.service.ts`, import the `PinDialogComponent`. Also, import and inject the `ModalController`.
 
 Once all of that is in place, we can modify `vault.service.ts` to implement the `onPasscodeRequest` event callback:
 

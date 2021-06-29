@@ -2,9 +2,9 @@
 
 We now have our OIDC provider properly configured. We also have Ionic Auth Connect installed in our application with a configuration to match that of our OIDC provider. It is time to implement the overall authentication flow in our application. To do this, we will need to perform the following tasks:
 
-- create an Authentication Service that extends Ionic Auth Connect
+- modify the `AuthenticationService` to extend Ionic Auth Connect
 - modify the login page to perform the login
-- modify the tab1 page to get authentication information from Auth Connect and to perform the logout
+- modify the Information page to get authentication information from Auth Connect and to perform the logout
 - update the auth interceptor to append the access token to the Authentication header as a bearer token
 - update the route guard to determine if the user is authenticated or not and respond accordingly
 
@@ -12,13 +12,7 @@ Let's get started.
 
 ## Authentication Service
 
-The first step will be to create a service class that extends the Ionic Auth Connect base class (`IonicAuth`).
-
-```bash
-ionic g s core/authentication --skipTests
-```
-
-The `IonicAuth` base class <a href="https://ionic.io/docs/auth-connect/api/#iionicauth" target="_blank">provides several methods</a> with useful base implementations. We will use the following methods as-is in various parts of our application:
+The first step will be to create a service class that extends the Ionic Auth Connect base class (`IonicAuth`). The `IonicAuth` base class <a href="https://ionic.io/docs/auth-connect/api/#iionicauth" target="_blank">provides several methods</a> with useful base implementations. We will use the following methods as-is in various parts of our application:
 
 - `login()`
 - `logout()`
@@ -27,12 +21,52 @@ The `IonicAuth` base class <a href="https://ionic.io/docs/auth-connect/api/#iion
 - `getAccessToken()`
 - `refresh()`
 
-We _do_ need to do some work in our extended class, however:
+Make the following modifications to the existing `ApplicationService`:
 
-- we need to pass the correct configuration based on the current execution context of the application
-- we will add a `getUserInfo()` method to extract important user information from the ID token
+Remove the existing methods from the class, and modify the class to extend `IonicAuth`:
 
-Here is the code for our service.
+```TypeScript
+@Injectable({
+  providedIn: 'root',
+})
+export class AuthenticationService extends IonicAuth {
+  constructor() {}
+}
+```
+
+In the constructor, pass the correct configuration to `super()` based on the current execution context of the application:
+
+```TypeScript
+  constructor(platform: Platform) {
+    const config = platform.is('hybrid') ? mobileAuthConfig : webAuthConfig;
+    super(config);
+  }
+```
+
+Add a `getUserInfo()` method to extract important user information from the ID token:
+
+```TypeScript
+  async getUserInfo(): Promise<User | undefined> {
+    const idToken = await this.getIdToken();
+    if (!idToken) {
+      return;
+    }
+
+    let email = idToken.email;
+    if (idToken.emails instanceof Array) {
+      email = idToken.emails[0];
+    }
+
+    return {
+      id: idToken.sub,
+      email,
+      firstName: idToken.given_name,
+      lastName: idToken.family_name
+    };
+  }
+```
+
+Finally, clean up any unused imports. When we are done, the code for our service will look like this:
 
 ```TypeScript
 import { Injectable } from '@angular/core';
@@ -108,8 +142,7 @@ When completed, the `ion-content` for the page should look like this:
 In the code:
 
 - add an `errorMessage` property
-- inject the auth service
-- modify the `signIn()` to do the login
+- modify the way the `signIn()` method performs the login
 
 Here is what the `signIn()` method should look like:
 
@@ -117,13 +150,28 @@ Here is what the `signIn()` method should look like:
   async signIn() {
     try {
       this.errorMessage = '';
-      await this.auth.login();
+      await this.authentication.login();
       this.navController.navigateRoot('/');
     } catch (err) {
       this.errorMessage = 'Login failed, please try again';
     }
   }
 ```
+
+## The Information Page
+
+The first thing we need to do is fix the `logout()` method since the code is currently written for the prior `AuthenticationService`, which returned an `Observable` instead of a `Promise`.
+
+With Auth Connect, the code can be simplified considerably:
+
+```TypeScript
+async logout() {
+  await this.authentication.logout();
+  this.navController.navigateRoot(['/', 'login']);
+}
+```
+
+**Note:** in a production application we probably would also want to wrap that in a `try ... catch` block so we can do something reasonable in the unlikely event that the `logout()` fails.
 
 At this point, we can log in using the following credentials:
 
@@ -132,48 +180,71 @@ At this point, we can log in using the following credentials:
 
 However, there are a couple of problems:
 
-1. the tab1 page still shows us as logged out
-1. going to tab2 still causes a 401 error which kicks us back to the login page
+1. the Information page still shows us as logged out
+1. going to Teas still causes a 401 error which kicks us back to the login page
 
-## The Information Page (tab1)
+The problem is that parts of our application are using the `VaultService` as the source of truth for our authentication information. This was correct for the previous architecture, but with the current architecture we want to use Auth Connect as the source of truth.
 
-The first thing we need to do is inject the auth service:
+First let's finish up with the Information page. Upon entry to the screen we need to get the information for the currently logged in user:
+
+```TypeScript
+  async ionViewWillEnter() {
+    this.currentUser = await this.authentication.getUserInfo();
+  }
+```
+
+Now the application shows us as logged in, but the Teas page still will not let us in.
+
+## Fixing the Teas Route
+
+The reason we cannot get to the Teas page is that, while we are certainly authenticated, we are not letting our REST API know. A couple of services are still using the `VaultService` as the source of truth:
+
+- the route guard
+- the auth interceptor
+
+We will fix those now.
+
+### The Auth Guard
+
+The auth-guard (`src/app/core/auth-guard.service.ts`) currently restores the session from the vault to determine if the user is authenticated:
+
+```TypeScript
+const isLoggedIn = !!(await this.vault.restoreSession());
+```
+
+Auth Connect includes a method called `isAuthenticated()` that we should use instead. This method returns a `Promise` that resolves as follows:
+
+- the access token exists and is not expired: resolve **true**
+- the access token exists but is exired: Auth Connect will attempt to refresh the token, and will resolve **true** if the refresh was successful and **false** otherwise
+- the access token does not exist: resolve **false**
+
+```TypeScript
+const isLoggedIn = await this.authentication.isAuthenticated();
+```
+
+This requires injecting the `AuthenticationService` in the constructor:
 
 ```TypeScript
   constructor(
-    private auth: AuthenticationService,
+    private authentication: AuthenticationService,
     private navController: NavController,
   ) {}
 ```
 
-Upon entry to the screen we need to get the information for the currently logged in user:
-
-```TypeScript
-  async ionViewWillEnter() {
-    this.currentUser = await this.auth.getUserInfo();
-  }
-```
-
-This will be displayed already by the view due to how the template is currently set up.
-
-Pressing the logout button will currently take us to the login page, but it does not really perform a logout. We can see this by doing a "sign in" again from the login page. Note that we were not asked for credentials from AWS. Fixing that is a matter of calling Ionic Auth Connect's `logout()` method before navigating to the login page. Note the `await`. We only want to navigate after a successful logout.
-
-```TypeScript
-  async logout() {
-    await this.auth.logout();
-    this.navController.navigateRoot(['/', 'login']);
-  }
-```
-
-**Note:** in a production application we probably would also want to wrap that in a `try ... catch` block so we can do something reasonable in the unlikely event that the `logout()` fails.
-
-## Fixing the Teas Route
-
-We still cannot go to the tea list on the `tab2` page. The reason is that while we are certainly authenticated, we are not letting our REST API know.
+Be sure to clean up the imports to remove anything that is now unused (which should just be the `VaultService`).
 
 ### The Auth Interceptor
 
-We are getting 401 errors since while we now have an access token we are not actually including it on the outgoing request. We fix that by updating the auth interceptor (`src/app/core/auth-interceptor.service.ts`). The interceptor has a `getToken()` method that currently returns `undefined`. We will change it to get the access token from Ionic Auth Connect.
+At this point, we are getting 401 errors since while we are not including the access token on the outgoing request. We will fix that by updating the auth interceptor (`src/app/core/auth-interceptor.service.ts`). The interceptor has a `getToken()` method that currently pulls the token from a `session` stored in the valut:
+
+```TypeScript
+  private async getToken(): Promise<string | undefined> {
+    const session = await this.vault.restoreSession();
+    return session?.token;
+  }
+```
+
+We are no longer managing the session ourselves, though. We are letting Auth Connect do all of the work. So let's change this code to get the access token from Auth Connect:
 
 ```TypeScript
   private async getToken(): Promise<string | undefined> {
@@ -181,32 +252,9 @@ We are getting 401 errors since while we now have an access token we are not act
   }
 ```
 
-**Note:** you will need to inject the `AuthenticationService` just like we have in other places.
+**Note:** you will need to inject the `AuthenticationService` just like we have in other places. Be sure to clean up anything that is unsed references and imports (which should just be the `VaultService`).
 
 Now that we are sending the access token to the backend, we should see a list of teas rather than getting 401 errors that redirect us to the login page.
-
-### Guard the Route
-
-If we log out and then try to go to `tab2` we get a weird error in the console about not being able to refresh the authentication tokens, and we do not get any teas. Worse, we are not redirected to the login page. That is because the exception we are getting is preventing the request from going out so we never get the 401 error.
-
-Let's update the auth-guard to make sure we are authenticated before we ever get to the route.
-
-**src/app/core/auth-guard.service.ts**
-
-- inject the nav controller
-- inject the auth service
-- update the canActivate logic as shown below
-
-```TypeScript
-  async canActivate(): Promise<boolean> {
-    if (await this.auth.isAuthenticated()) {
-      return true;
-    }
-
-    this.navController.navigateRoot(['/', 'login']);
-    return false;
-  }
-```
 
 ## Conclusion
 
